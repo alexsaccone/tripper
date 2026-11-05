@@ -21,6 +21,24 @@ ROOT = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home() / ".local/state")) / "Tripper"
 SEARCH_CAP = 240
 WINDOW_SECONDS = 31 * 86400
+CREDENTIAL_NAMES = ("SERPAPI_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID")
+
+
+def load_credentials(path):
+    values = {}
+    if path.is_file():
+        for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            name, separator, value = line.partition("=")
+            name = name.strip()
+            if separator and name in CREDENTIAL_NAMES:
+                value = value.strip()
+                if len(value) >= 2 and value[0] in ("'", '"') and value[-1] == value[0]:
+                    value = value[1:-1]
+                values[name] = value
+    return tuple(os.environ.get(name, values.get(name)) for name in CREDENTIAL_NAMES)
 
 
 def load_watches(path):
@@ -197,16 +215,8 @@ def main():
                        help="show the search budget without calling either service")
     modes.add_argument("--test-alert", action="store_true", help="send a test to your Telegram chat")
     args = parser.parse_args()
-    token = os.environ.get("TELEGRAM_BOT_TOKEN")
-    chat = os.environ.get("TELEGRAM_CHAT_ID")
-    if args.test_alert:
-        if not token or not chat:
-            raise ValueError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID to test alerts.")
-        telegram_send(token, chat, "Tripper test alert. Phone alerts are connected.")
-        print("Telegram accepted the test message.")
-        return 0
-
-    watches = load_watches(args.config)
+    if not args.test_alert:
+        watches = load_watches(args.config)
     if args.plan is not None:
         if args.plan < 1:
             raise ValueError("Checks per day must be at least one.")
@@ -216,9 +226,16 @@ def main():
         print(f"Tripper caps itself at {SEARCH_CAP} search attempts per rolling 31 days.")
         return int(needed > SEARCH_CAP)
 
-    key = os.environ.get("SERPAPI_KEY")
+    key, token, chat = load_credentials(ROOT / ".env")
+    if args.test_alert:
+        if not token or not chat:
+            raise ValueError("Set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env or your environment.")
+        telegram_send(token, chat, "Tripper test alert. Phone alerts are connected.")
+        print("Telegram accepted the test message.")
+        return 0
+
     if not all((key, token, chat)):
-        raise ValueError("Set SERPAPI_KEY, TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID before running.")
+        raise ValueError("Set SERPAPI_KEY, TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in .env or your environment.")
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(STATE_DIR / "run.lock", timeout=0)) as lock:
         try:
