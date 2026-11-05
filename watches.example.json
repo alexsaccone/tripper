@@ -4,8 +4,9 @@
     "origins": ["JFK", "EWR"],
     "destinations": ["LIS", "OPO"],
     "depart_from": "2027-04-01",
-    "depart_through": "2027-04-30",
-    "trip_days": [7],
+    "depart_through": "2027-04-10",
+    "trip_days": [7, 8, 9, 10, 11, 12, 13, 14],
+    "return_through": "2027-04-20",
     "adults": 1
   }
 ]
