@@ -1,0 +1,11 @@
+[
+  {
+    "name": "Example: New York to Lisbon or Porto",
+    "origins": ["JFK", "EWR"],
+    "destinations": ["LIS", "OPO"],
+    "depart_from": "2027-04-01",
+    "depart_through": "2027-04-30",
+    "trip_days": [7],
+    "adults": 1
+  }
+]
